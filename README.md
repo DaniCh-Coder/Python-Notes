@@ -1,8 +1,8 @@
 # Python-School
 ## In this repository you will find:
-### * Python Notebook and Python.py sripts with notes and excercices in python to share with you.
+### * Python Notebook and Python.py sripts with notes and excercices in python.
 
-* You can work wwhit this files in your own IDE
+* You can work whit these files in your own IDE
 * You are ivited to let me know your observations and sugestion, as well as improvements or new excercises to add to this repo
 
 I have made those files to learn, to practise and I hope it can help you.
