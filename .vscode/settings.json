@@ -32,5 +32,8 @@
             "name": "fastapi",
             "depth": 2
         }
-    ]
+    ],
+    "workbench.editorAssociations": {
+        "file:/**/*.csv": "jupyter-data-wrangler"
+    }
 }
