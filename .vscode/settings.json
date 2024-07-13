@@ -35,6 +35,6 @@
     ],
     "workbench.editorAssociations": {
         "file:/**/*.csv": "jupyter-data-wrangler",
-        "*.parquet": "jupyter-data-wrangler"
+        "file:/**/*.parquet": "jupyter-data-wrangler"
     }
 }
