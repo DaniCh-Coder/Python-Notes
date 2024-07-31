@@ -2,9 +2,10 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm, uniform, rv_continuous, rv_discrete
+import scipy.stats as stats
+from scipy.stats import binom
 
-def distr_prob(dist, a=None, b=None, between=True):
+def distr_prob(dist, a=None, b=None, between=True, pdx=False):
     """
      Función: Esta función grafica:
      1. La curva de distribución normal de probabilidad entre x_min y x_max
@@ -15,6 +16,7 @@ def distr_prob(dist, a=None, b=None, between=True):
      a: Límite inferior del rango de probabilidad buscado
      b: Límite superior del rango de probabilidad buscado
      between: True indica probabilidad entre a y b. False indica probabilidad fuera de a y b.
+     pdx: True indica que se pone en el grafico la probabilidad correspondiente a x/z crítico.
      Paremetros:
      x_rango: es el rango de x/z correspondiente a la curva de distribución.
      dist.loc=0 y dist.scale=1 se considera estandard
@@ -27,14 +29,14 @@ def distr_prob(dist, a=None, b=None, between=True):
 # Verificar si 'dist' es una distribución estándar
     is_standard = False
 
-    if isinstance(dist, rv_continuous):
-        if dist.dist.name == 'norm':
+    if dist.dist.name == 'norm':
             is_standard = (dist.mean() == 0 and dist.std() == 1)
-        elif dist.dist.name == 'uniform':
+    elif dist.dist.name == 'uniform':
             is_standard = (dist.mean() == 0.5 and dist.std() == (1/12)**0.5)
     
     x = 'x' if is_standard else 'z'
-    
+    print(f"dist: {dist.dist.name}, is_standard: {is_standard}, dist.mean: {dist.mean()}, dist.std:{dist.std()}")
+     
     # Rango de x de la funcion de distribución normal
     # Como la distribución es normal distribuye los valores desde negativos hasta positivos con media cero
     x_min = dist.ppf(0.00001) # devuelve el valor de probabilidad correspondiente al percentil especificado como argumento
@@ -81,12 +83,14 @@ def distr_prob(dist, a=None, b=None, between=True):
     # Añadir texto de valor de variable "a" y su probabilidad "p(a)"
     if a > x_min:
         ax.text(a, 0.0, f'{x}={a:.3f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de x=a
-        ax.text(a, dist.pdf(a), f'p={dist.pdf(a):.3f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de p(b)
+        if pdx:
+            ax.text(a, dist.pdf(a), f'p={dist.pdf(a):.3f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de p(b)
     
     # Añadir texto de valor de variable "b" y su probabilidad "p(b)"
     if b < x_max:
         ax.text(b, 0.0, f'{x}={b:.3f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de x=b
-        ax.text(b, dist.pdf(b), f'p={dist.pdf(b):.3f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de p(b)
+        if pdx:
+            ax.text(b, dist.pdf(b), f'p={dist.pdf(b):.3f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de p(b)
 
     # Añadir texto probabilidad acumulada en el centro del gráfico
     x_centro = (x_rango.max() + x_rango.min()) / 2 # Punto medio del eje X
@@ -129,8 +133,124 @@ def inter_confi(dist, nc=0.95):
     print(f"Nivel de confianza: {nc*100}%.")
     print(f"Percentiles a y b : {a:.3f} y {b:.3f}")
     print(f"Valores de x      : {iqa:.3f} y {iqb:.3f}.")
-    print(f"Valores de sigma  : {(iqa-mean)/sigm:.2f} y {(iqb-mean)/sigm:.2f}")
+    print(f"Valores de Z o S  : {(iqa-mean)/sigm:.2f} y {(iqb-mean)/sigm:.2f}")
     print(f"Probs. acums.     : {pqa:.3f} y {pqb:.3f}.")
     print(f"Prob. a + b       : {pab*100:.2f}%.")
     distr_prob(dist, iqa, iqb)
     
+
+def reg_critica(dist, rg=0.05, side='both'):
+    # Vemos los estadísticos de la función de distirbución
+    mean, var, skew, kurt = dist.stats(moments='mvsk')
+    sigm = math.sqrt(var)
+    
+    print(f"media: {mean}, desv.std.: {sigm} , sesgo: {skew}, kurtosis: {kurt})")
+    print(f"α: {rg*100}%.")    
+    
+    match side:
+        case 'both':
+            a= rg/2                 # percentil izquierdo
+            b= 1-a                  # percentil derecho
+            iqa = dist.ppf(a)       
+            iqb = dist.ppf(b)
+            pqa = dist.cdf(iqa)     # probabilidad acumulada izquierda
+            pqb = dist.sf(iqb)      # probabilidad acumulada derecha
+            pab = pqb + pqa         # suma de probabilidades acumuladas
+            print(f"Probs. acums.     : {pqa:.3f} y {pqb:.3f}.")
+            print(f"Prob. a + b       : {pab*100:.2f}%.")
+        case 'left':
+            a=0
+            b=rg
+            iqa = dist.ppf(a)       
+            iqb = dist.ppf(b)
+            pqb = dist.cdf(iqb)     # probabilidad acumulada izquierda desde -infinito a b
+            print(f"Prob. acum.     : {pqb:.3f} = {pqb*100:.2f}%.")
+        case 'right':
+            a=1-rg
+            b=1
+            iqa = dist.ppf(a)       
+            iqb = dist.ppf(b)
+            pqa = dist.sf(iqa)     # probabilidad acumulada derecha desde a al infinito
+            print(f"Prob. acum.     : {pqa:.3f} = {pqa*100:.2f}%.")        
+        case _:
+            raise ValueError("Not a left, right or both sides")
+    
+    print(f"Percentiles a y b : {a:.3f} y {b:.3f}")
+    print(f"Valores de x      : {iqa:.3f} y {iqb:.3f}.")
+    print(f"Valores de Z o S  : {(iqa-mean)/sigm:.2f} y {(iqb-mean)/sigm:.2f}")
+
+    match side:
+        case 'both':
+            distr_prob(dist, iqa, iqb, between=False)
+        case 'left':
+            distr_prob(dist, b=iqb)
+        case 'right':
+            distr_prob(dist, a=iqa)
+        case _:
+            raise ValueError("Not a point")
+                
+# plot_binom: función que plotea la distribución binomial
+def plot_binom(n=100, p=0.4, alfa=0.05, tipo=None, ax=None):
+    """
+    Esta función plotea la distribución binomial.
+    Opcional: grafica también el nivel de signigicancia alfa o el intervalo de confianza
+
+    Args:
+        n (int, optional): tamaño de la muestra. Defaults to 100.
+        p (float, optional): proporción. Defaults to 0.4.
+        alfa (float, optional): nivel de significancia. Defaults to 0.05.
+        tipo (str, optional): indica si se marca: cola izquierda, derecha, IC o nada. Defaults to 'none'.
+    
+    Returns:
+        fig: Objeto Figure de matplotlib.
+        ax: Objeto Axes de matplotlib.
+    """
+    # construcción de eje x para toda la distribución binomial de percentiles 0 a 100
+    x = np.arange(binom.ppf(0.01, n, p), binom.ppf(0.99, n, p))
+    
+    # plotea la función de distribución binomial de percentiles 0 a 100
+    # Si se proporciona un eje, usar ese eje en lugar de crear uno nuevo
+    if ax is None:
+        fig, ax = plt.subplots(1, 1)
+    else:
+        fig = ax.get_figure()
+
+    # averigua el valor de x correspondiente a cada percentil de 0 a 100
+    ax.plot(x, binom.pmf(x, n, p), 'bo', ms=8, label='binom pmf')
+    # plotea la linea vertical correspondiente al valor de x de cada percentil
+    ax.vlines(x, 0, binom.pmf(x, n, p), colors='b', lw=5, alpha=0.5)
+
+    rv = binom(n,p)
+    match tipo:
+        case None:
+            # si no hay intervalo ni alfa específico dibuja dibuja de nuevo toda la función de distribución
+            ax.vlines(x, 0, rv.pmf(x), colors='k', linestyles='-', lw=1, label='frozen pmf')
+        case 'left':
+            # alfa cola izquierda: plotea en rojo el alfa en la cola izquierda de la distirbución.
+            x_alfa_l = np.arange(binom.ppf(0.01, n, p), binom.ppf(alfa, n, p))
+            ax.vlines(x_alfa_l, 0, rv.pmf(x_alfa_l), colors='r', linestyles='-', lw=2, label=f'alfa {alfa}')
+            ax.text(binom.ppf(alfa, n, p), -0.003, f'k={binom.ppf(alfa, n, p):.0f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de k=a
+        case 'right':
+            # alfa cola derecha: plotea en rojo el alfa en la cola derecha de la ditribución.
+            x_alfa_r = np.arange(binom.ppf(1-alfa, n, p), binom.ppf(0.99, n, p))
+            ax.vlines(x_alfa_r, 0, rv.pmf(x_alfa_r), colors='r', linestyles='-', lw=2, label=f'alfa {alfa}')
+            ax.text(binom.ppf(1-alfa, n, p), -0.003, f'k={binom.ppf(1-alfa, n, p):.0f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de k=a
+        case 'both':
+            # alfa bilateral: divide el alfa en dos y los dibuja en las dos colas.
+            x_alfa_l = np.arange(binom.ppf(0.01, n, p), binom.ppf(alfa/2, n, p))
+            ax.vlines(x_alfa_l, 0, rv.pmf(x_alfa_l), colors='r', linestyles='-', lw=2, label=f'alfa {alfa/2}')
+            x_alfa_r = np.arange(binom.ppf(1-alfa/2, n, p), binom.ppf(0.99, n, p))
+            ax.vlines(x_alfa_r, 0, rv.pmf(x_alfa_r), colors='r', linestyles='-', lw=2, label=f'alfa {alfa/2}')
+            ax.text(binom.ppf(alfa/2, n, p), -0.003, f'k={binom.ppf(alfa/2, n, p):.0f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de k=a
+            ax.text(binom.ppf(1-alfa/2, n, p), -0.003, f'k={binom.ppf(1-alfa/2, n, p):.0f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de k=a
+        case 'IC':
+            # intervalo de confianza: calcula el IC = 1- alfa y lo dibuja
+            x_ic = np.arange(binom.ppf(alfa/2, n, p), binom.ppf(1-alfa/2, n, p))
+            ax.vlines(x_ic, 0, rv.pmf(x_ic), colors='k', linestyles='-', lw=2, label=f'IC {1-alfa}')
+            ax.text(binom.ppf(alfa/2, n, p), -0.003, f'k={binom.ppf(alfa/2, n, p):.0f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de k=a
+            ax.text(binom.ppf(1-alfa/2, n, p), -0.003, f'k={binom.ppf(1-alfa/2, n, p):.0f}', ha='center', va='bottom', color='red', fontsize=8)   # Añade valor de k=a
+        case _ :
+            print("*** Por favor indique tipo de plot: none, left, right, both, IC y alfa. ***")
+                    
+    ax.legend(loc='best', frameon=False)
+    return fig, ax
