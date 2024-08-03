@@ -114,7 +114,8 @@ def distr_prob(dist, a=None, b=None, between=True, pdx=False):
     ax.spines['left'].set_visible(False)
     ax.spines['bottom'].set_color('gray')
 
-    plt.show()
+    # plt.show()
+    return fig, ax
 
 def inter_confi(dist, nc=0.95):
     # Vemos los estadísticos de la función de distirbución
@@ -140,6 +141,20 @@ def inter_confi(dist, nc=0.95):
     
 
 def reg_critica(dist, rg=0.05, side='both'):
+    """
+    Esta función imprime los parametros y estadísticos de una función 
+    y grafica la región crítica
+    
+    Args:
+        dist: La distribución con sus parametros
+        rg: probabilidad alfa de la región crítica
+        side: both: indica si es bilateral, 'left': cola izquierda o 'der': derecha
+
+    Raises:
+        ValueError: 
+        "Not a left, right or both sides"
+    """
+    
     # Vemos los estadísticos de la función de distirbución
     mean, var, skew, kurt = dist.stats(moments='mvsk')
     sigm = math.sqrt(var)
@@ -181,14 +196,15 @@ def reg_critica(dist, rg=0.05, side='both'):
 
     match side:
         case 'both':
-            distr_prob(dist, iqa, iqb, between=False)
+            fig, ax = distr_prob(dist, iqa, iqb, between=False)
         case 'left':
-            distr_prob(dist, b=iqb)
+            fig, ax = distr_prob(dist, b=iqb)
         case 'right':
-            distr_prob(dist, a=iqa)
+            fig, ax = distr_prob(dist, a=iqa)
         case _:
             raise ValueError("Not a point")
-                
+    return fig, ax
+            
 # plot_binom: función que plotea la distribución binomial
 def plot_binom(n=100, p=0.4, alfa=0.05, tipo=None, ax=None):
     """
