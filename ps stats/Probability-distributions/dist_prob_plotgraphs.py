@@ -28,13 +28,22 @@ def distr_prob(dist, a=None, b=None, between=True, pdx=False):
     """
 # Verificar si 'dist' es una distribución estándar
     is_standard = False
-
-    if dist.dist.name == 'norm':
+    match dist.dist.name:
+        case 'norm':
             is_standard = (dist.mean() == 0 and dist.std() == 1)
-    elif dist.dist.name == 'uniform':
+        case 'uniform':
             is_standard = (dist.mean() == 0.5 and dist.std() == (1/12)**0.5)
+        case 't':
+            is_standard = (dist.mean() == 0)   
+        case _ :
+            print("*** Por favor indique tipo de distribución. ***")
+            
+    # if dist.dist.name == 'norm':
+    #        is_standard = (dist.mean() == 0 and dist.std() == 1)
+    # elif dist.dist.name == 'uniform':
+    #        is_standard = (dist.mean() == 0.5 and dist.std() == (1/12)**0.5)
     
-    x = 'x' if is_standard else 'z'
+    x = 'z' if is_standard else 'x'
     print(f"dist: {dist.dist.name}, is_standard: {is_standard}, dist.mean: {dist.mean()}, dist.std:{dist.std()}")
      
     # Rango de x de la funcion de distribución normal
