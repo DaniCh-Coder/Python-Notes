@@ -11,8 +11,8 @@ Pydantic es una librería de Python que permite definir y validar modelos de dat
     + Sin embargo, todas las releases de la versión 2 pueden servir para aprender Pydantic.
 
 # Contenido
-* 🚀 [Introducción](.\00_pydantic_intro.ipynb)
-* 🚀 [Modelos](.\01_models.ipynb)
+* 🚀 [Introducción](./00_pydantic_intro.ipynb)
+* 🚀 [Modelos](./01_models.ipynb)
   * [Modelos Anidados](.\02_nested_models.ipynb)
 * 🚀 [Tipos de datos](.\04_types.ipynb)
   * [tipos y Validaciones](.\04_types.py)
