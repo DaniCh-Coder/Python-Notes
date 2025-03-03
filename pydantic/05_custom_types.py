@@ -1,0 +1,153 @@
+#----------------------------------------------------------------------------------------#
+# Tipos de datos de python y pydantic
+#----------------------------------------------------------------------------------------#
+from pydantic import BaseModel, Field, field_validator, SecretStr, EmailStr,ValidationError
+from typing import Annotated
+from enum import auto, IntFlag
+import re
+
+VALID_PASSWORD_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$")
+# ^ - Indica el inicio de la cadena
+# (?=.*[a-z]) - Es un "lookahead positivo" que verifica que haya al menos una letra minúscula en cualquier parte de la cadena
+# (?=.*[A-Z]) - Otro "lookahead positivo" que verifica que haya al menos una letra mayúscula
+# (?=.*\d) - Un tercer "lookahead positivo" que verifica que haya al menos un dígito
+#.{8,} - Coincide con cualquier carácter (excepto saltos de línea), y el {8,} indica que debe haber al menos 8 caracteres
+# $ - Indica el final de la cadena
+
+VALID_NAME_REGEX = re.compile(r"^[a-zA-Z]{2,}$")
+# r"^[a-zA-Z]{2,}$" - Es la expresión regular en sí, con los siguientes elementos:
+# r - Es un prefijo de string "raw" (crudo) en Python, que evita que los caracteres de escape como \ sean interpretados por Python.
+# ^ - Indica el inicio de la cadena.
+# [a-zA-Z] - Define un conjunto de caracteres que incluye todas las letras, tanto mayúsculas como minúsculas (a-z y A-Z).
+# {2,} - Es un cuantificador que especifica que el elemento anterior (el conjunto de letras) debe aparecer al menos 2 veces, sin límite máximo.
+# $ - Indica el final de la cadena.
+
+
+# Clase complementaria que define roles posibles para una 'Persona'
+# Utiliza como clase base IntFlag que es un tipo propio de python.
+class Role(IntFlag):
+    Author = auto()                                     # asigna un valor univoco a autor
+    Editor = auto()                                     # asigna un valor univoco a editor
+    Developer = auto()                                  # asigna un valor univoco a developer
+    Admin = Author | Editor | Developer                 # admin podrá ser uno de los tres anteriores
+
+# Definición de una clase 'Persona' tulizando dipos de datos de pydantic 2.0
+# BaseModel implementa todas las bases de los controles y validaciones de los tipos de datos (python y propios de pydantic)
+class Persona(BaseModel):
+    name: Annotated[str, Field(min_length=1)]           # pydantic: min_lenth, especifica restricción de longitud mínima
+    account_id: Annotated[int, Field(gt=0)]             # pydantic: gt, especifica mayor que
+    email: Annotated[EmailStr, Field(                   # pydantic: EmailStr, que define un tipo de datos especial para e-mail
+        examples=["dani@some-email.com"],               # pydantic: exapmples, opcional para contener un ejemplo
+        description="The email address of the user",    # pydantic: desciption, opcional para aclarar de que se trata un dato
+        frozen=True                                     # pydantic: fronzen, fuerza un valor en un dato que no se puede cambiar durante la app
+    )]
+    password: Annotated[SecretStr, Field(               # pydantic: SecretStr, tipo de dato para almacenar y ocultar el contenido de un campo.
+        examples=["Password123"],
+        description="The password of the user"
+    )]
+    role: Annotated[Role, Field(                        # python: utiliza un tipo de datos previamente definido en la clase 'Role'
+        default=Role.Author,
+        description="The role of the user"
+    )]
+
+    # Método de validación de datos de la clase 'Persona' para name
+    @field_validator('name')
+    def validate_name(value: str) -> str:
+        if not VALID_NAME_REGEX.match(value):
+            raise ValueError(
+                "Nombre invalido: debe contener solo letras y tener al menos 2 caracteres"
+            )
+        return value
+   
+    # Método de validación de datos de la clase 'Persona' para password
+    @field_validator('password')
+    def validate_password(value: SecretStr) -> SecretStr:
+        if not VALID_PASSWORD_REGEX.match(value.get_secret_value()):
+            raise ValueError(
+                "Contraseña invalida: debe contener al menos 8 caracteres, una letra mayúscula, una letra minúscula y un dígito"
+            )
+        return value
+    
+# ----------------------------------------------------------------------------------------------#
+# Código de testeo en tiempo de ejecución                                                       #
+# ----------------------------------------------------------------------------------------------#
+def validate(data: dict[str, any]) -> None:
+    try:
+        user = Persona.model_validate(data)
+        print(user)
+    except ValidationError as e:
+        print("User is invalid:")
+        print(e)
+
+def main() -> None:
+    # Setea un dicionario para validar datos ok
+    test_data = dict(
+        good_data = {                                   
+            "name": "Tulio",
+            "account_id":456,
+            "email": "example@maildomain.com",
+            "password": "Password123",
+        },
+        
+        # Setea un dicionario para validar datos que no estan ok
+        bad_data = {                                   
+            "name": "bad name",
+            "account_id":456,
+            "email": "bad mail",
+            "password": "bad password",
+        },
+        
+        # Test mal nombre
+        bad_name = {                                   
+            "name": "T",
+            "account_id":456,
+            "email": "example@maildomain.com",
+            "password": "Password123",
+        },
+
+        # Test mal email
+        bad_email = {                                   
+            "name": "Tulio",
+            "account_id":456,
+            "email": "bad mail",
+            "password": "Password123",
+        },
+        
+        # Test mal password
+        bad_password = {                                   
+            "name": "Tulio",
+            "account_id":456,
+            "email": "example@maildomain.com",  
+            "password": "bad password",
+        },
+    
+        # Test duplicado
+        duplicate = {                                   
+            "name": "Tulio",
+            "account_id":456,
+            "email": "example@maildomain.com",
+            "password": "Password123",
+        },
+        
+        # Test de validación de datos faltanes
+        missing = {                                   
+            "account_id":656,
+            "email": "",
+        }
+    )
+        
+    # Llama a control de validaciones
+    for example_name, data in test_data.items():
+        print(example_name)
+        validate(data)
+        print()
+
+
+if __name__ == "__main__":
+    main()
+    
+#----------------------------------------------------------------------------------------#
+# En esta segunda prueba se valida el modelo de datos con datos correctos y con datos incorrectos.
+# El código primero valida los datos correctos y luego los incorrectos.
+# En el caso de los datos incorrectos se captura el error y se imprime en pantalla.
+#----------------------------------------------------------------------------------------#
