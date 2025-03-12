@@ -1,3 +1,4 @@
+# Este script lista los modelos de OpenAI disponibles en la cuenta
 import openai
 import os
 from dotenv import load_dotenv
@@ -16,12 +17,3 @@ client = openai.OpenAI()
 models = client.models.list()
 for model in models:
     print(model.id)
-
-# Llamada a la API de chat
-response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "Hola, ¿cómo estás?"}]
-)
-
-# Imprimir la respuesta
-print(response.choices[0].message.content)
