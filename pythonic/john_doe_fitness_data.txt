@@ -1,0 +1,4 @@
+Date,Exercise,Duration,Calories
+2025-12-04 21:13:48,Running,30,300
+2025-12-04 21:13:48,Cycling,45,400
+2025-12-04 21:13:48,Swimming,15,250
